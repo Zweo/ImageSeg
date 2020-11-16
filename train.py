@@ -26,7 +26,7 @@ data
         *.png
 code
     train.py
-    …… ……
+    ...
 '''
 
 
