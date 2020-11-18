@@ -13,9 +13,11 @@ args = {
     'log_dir': 'log',
     'num_classes': 18,
     'epochs': 1000,
-    'lr': 0.0001,
+    'lr': 1e-6,
     'resume': True,
     'data_dir': "../data",
+    'gamma': 0.5,
+    'step': 10
 }
 '''
 文件目录：
@@ -57,6 +59,10 @@ def train():
         model.cuda()
 
     solver = Solver(num_classes=args['num_classes'],
+                    lr_args={
+                        "gamma": args['gamma'],
+                        "step_size": args['step']
+                    },
                     optimizer_args={
                         "lr": args['lr'],
                         "betas": (0.9, 0.999),

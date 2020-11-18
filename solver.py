@@ -13,13 +13,7 @@ from losses import CombinedLoss
 
 def create_exp_directory(exp_dir_name):
     if not os.path.exists(exp_dir_name):
-        try:
-            os.makedirs(exp_dir_name)
-            print("Successfully Created Directory @ {}".format(exp_dir_name))
-        except Exception:
-            print("Directory Creation Failed - Check Path")
-    else:
-        print("Directory {} Exists ".format(exp_dir_name))
+        os.makedirs(exp_dir_name)
 
 
 def plot_predictions(images_batch, labels_batch, batch_output, plt_title,
@@ -52,8 +46,8 @@ def plot_predictions(images_batch, labels_batch, batch_output, plt_title,
 
 
 class Solver(object):
-    def __init__(self, num_classes, optimizer, optimizer_args={}):
-        self.lr_scheduler_args = {"gamma": 0.5, "step_size": 8}
+    def __init__(self, num_classes, optimizer, lr_args, optimizer_args):
+        self.lr_scheduler_args = lr_args
         self.optimizer_args = optimizer_args
         self.optimizer = optimizer
         self.loss_func = CombinedLoss(weight_dice=0, weight_ce=100)
