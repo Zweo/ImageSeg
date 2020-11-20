@@ -308,7 +308,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-class Deeplab_v3(nn.Module):
+class NET(nn.Module):
     # in_channel = 3 fine-tune
     def __init__(self, class_number=18):
         super().__init__()
@@ -403,7 +403,7 @@ class Deeplab_v3(nn.Module):
 
 def init_model():
     model_path = os.path.join(os.path.dirname(__file__), 'model.pkl')
-    model = Deeplab_v3()
+    model = NET()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model_state = torch.load(model_path, map_location=device)

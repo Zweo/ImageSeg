@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data.dataloader import DataLoader
 from dataset import DataTrain
-from model_define import UNet
+from model_define import NET
 from solver import Solver
 
 args = {
@@ -52,7 +52,7 @@ def train():
     train_dataloader = DataLoader(dataset=dataset_train,
                                   batch_size=args['batch_size'],
                                   shuffle=False)
-    model = UNet(3, 18)
+    model = NET()
     if torch.cuda.is_available():
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
