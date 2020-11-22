@@ -13,11 +13,11 @@ args = {
     'log_dir': 'log',
     'num_classes': 18,
     'epochs': 1000,
-    'lr': 1e-6,
+    'lr': 1e-5,
     'resume': True,
     'data_dir': "../data",
     'gamma': 0.5,
-    'step': 10
+    'step': 15
 }
 '''
 文件目录：
