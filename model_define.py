@@ -17,13 +17,13 @@ class ASPP(nn.Module):
         self.atrous_block1 = nn.Sequential(nn.Conv2d(in_channel, depth, 1, 1),
                                            nn.ReLU(inplace=True))
         self.atrous_block6 = nn.Sequential(
-            nn.Conv2d(in_channel, depth, 3, 1, padding=3, dilation=3),
-            nn.ReLU(inplace=True))
-        self.atrous_block12 = nn.Sequential(
             nn.Conv2d(in_channel, depth, 3, 1, padding=6, dilation=6),
             nn.ReLU(inplace=True))
+        self.atrous_block12 = nn.Sequential(
+            nn.Conv2d(in_channel, depth, 3, 1, padding=12, dilation=12),
+            nn.ReLU(inplace=True))
         self.atrous_block18 = nn.Sequential(
-            nn.Conv2d(in_channel, depth, 3, 1, padding=9, dilation=9),
+            nn.Conv2d(in_channel, depth, 3, 1, padding=18, dilation=18),
             nn.ReLU(inplace=True))
 
         self.conv_1x1_output = nn.Sequential(nn.Conv2d(depth * 5, depth, 1, 1),
@@ -106,7 +106,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block,
                                        512,
                                        layers[3],
-                                       stride=2,
+                                       stride=1,
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
@@ -183,8 +183,8 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     return model
 
 
-def resnet50(pretrained=False, progress=True, **kwargs):
-    return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
+def resnet18(pretrained=False, progress=True, **kwargs):
+    return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
                    **kwargs)
 
 
@@ -308,23 +308,17 @@ class Bottleneck(nn.Module):
         return out
 
 
-class NET(nn.Module):
+class Deeplab_v3(nn.Module):
     # in_channel = 3 fine-tune
-    def __init__(self, class_number=18):
+    def __init__(self):
         super().__init__()
-        encoder = resnet50()
+        encoder = resnet18()
         self.start = nn.Sequential(encoder.conv1, encoder.bn1, encoder.relu)
 
         self.maxpool = encoder.maxpool
 
-        self.low_feature1 = nn.Sequential(nn.Conv2d(64, 32, 1, 1),
-                                          nn.BatchNorm2d(32),
-                                          nn.ReLU(inplace=True))
-        self.low_feature2 = nn.Sequential(nn.Conv2d(64, 64, 1, 1),
-                                          nn.BatchNorm2d(64),
-                                          nn.ReLU(inplace=True))
-        self.low_feature4 = nn.Sequential(nn.Conv2d(512, 128, 1, 1),
-                                          nn.BatchNorm2d(128),
+        self.low_feature3 = nn.Sequential(nn.Conv2d(64, 48, 1, 1),
+                                          nn.BatchNorm2d(48),
                                           nn.ReLU(inplace=True))
 
         self.layer1 = encoder.layer1  #256
@@ -332,26 +326,13 @@ class NET(nn.Module):
         self.layer3 = encoder.layer3  #1024
         self.layer4 = encoder.layer4  #2048
 
-        self.aspp = ASPP(in_channel=2048, depth=256)
+        self.aspp = ASPP(in_channel=512, depth=256)
 
-        self.conv_cat4 = nn.Sequential(
-            nn.Conv2d(256 + 128, 256, 3, 1, padding=1), nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True))
-
-        self.conv_cat2 = nn.Sequential(
-            nn.Conv2d(256 + 64, 256, 3, 1, padding=1), nn.BatchNorm2d(256),
+        self.conv_cat3 = nn.Sequential(
+            nn.Conv2d(256 + 48, 256, 3, 1, padding=1), nn.BatchNorm2d(256),
             nn.ReLU(inplace=True), nn.Conv2d(256, 256, 3, 1, padding=1),
             nn.BatchNorm2d(256), nn.ReLU(inplace=True),
-            nn.Conv2d(256, 64, 3, 1, padding=1), nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True))
-
-        self.conv_cat1 = nn.Sequential(nn.Conv2d(64 + 32, 64, 3, 1, padding=1),
-                                       nn.BatchNorm2d(64),
-                                       nn.ReLU(inplace=True),
-                                       nn.Conv2d(64, 64, 3, 1, padding=1),
-                                       nn.BatchNorm2d(64),
-                                       nn.ReLU(inplace=True),
-                                       nn.Conv2d(64, 18, 3, 1, padding=1))
+            nn.Conv2d(256, 18, 1, 1, padding=0))
 
     def forward(self, x):
         size0 = x.shape[2:]  # need upsample input size
@@ -360,38 +341,18 @@ class NET(nn.Module):
         x3 = self.layer1(x2)  # 256, 64*64
         x4 = self.layer2(x3)  # 512, 32*32
         x5 = self.layer3(x4)  # 1024,16*16
-        x = self.layer4(x5)  # 2048,8*8
-        x = self.aspp(x)  # 256, 8*8
+        x = self.layer4(x5)  # 2048,16*16
+        x = self.aspp(x)  # 256, 16*16
 
-        low_feature1 = self.low_feature1(x1)  # 64,  128*128
-        low_feature2 = self.low_feature2(x2)  # 64,  64*64
-        # low_feature3 = self.low_feature3(x3) # 256, 64*64
-        low_feature4 = self.low_feature4(x4)  # 512, 32*32 -> 128, 32*32
-        # low_feature5 = self.low_feature5(x5) # 1024,16*16
+        low_feature3 = self.low_feature3(x3)  # 256, 64*64
 
-        size1 = low_feature1.shape[2:]
-        size2 = low_feature2.shape[2:]
-        # size3 = low_feature3.shape[2:]
-        size4 = low_feature4.shape[2:]
-        # size5 = low_feature5.shape[2:]
+        size3 = low_feature3.shape[2:]
 
-        decoder_feature4 = F.interpolate(x,
-                                         size=size4,
+        decoder_feature3 = F.interpolate(x,
+                                         size=size3,
                                          mode='bilinear',
                                          align_corners=True)
-        x = self.conv_cat4(torch.cat([low_feature4, decoder_feature4], dim=1))
-
-        decoder_feature2 = F.interpolate(x,
-                                         size=size2,
-                                         mode='bilinear',
-                                         align_corners=True)
-        x = self.conv_cat2(torch.cat([low_feature2, decoder_feature2], dim=1))
-
-        decoder_feature1 = F.interpolate(x,
-                                         size=size1,
-                                         mode='bilinear',
-                                         align_corners=True)
-        x = self.conv_cat1(torch.cat([low_feature1, decoder_feature1], dim=1))
+        x = self.conv_cat3(torch.cat([low_feature3, decoder_feature3], dim=1))
 
         score = F.interpolate(x,
                               size=size0,
@@ -403,7 +364,7 @@ class NET(nn.Module):
 
 def init_model():
     model_path = os.path.join(os.path.dirname(__file__), 'model.pkl')
-    model = NET()
+    model = Deeplab_v3()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model_state = torch.load(model_path, map_location=device)
