@@ -34,6 +34,7 @@ def predict(model, input_path, output_dir):
     res = []
     for img in imgs:
         img = torch.from_numpy(np.array(img)).float().unsqueeze(0)
+        img = img / 255
         if torch.cuda.is_available():
             img = img.cuda()
         img = img.permute(0, 3, 1, 2)
@@ -48,4 +49,4 @@ def predict(model, input_path, output_dir):
 if __name__ == "__main__":
     from model_define import init_model
     model = init_model()
-    predict(model, '../data/images/1.tif', '')
+    predict(model, '../data/images/10.tif', '')

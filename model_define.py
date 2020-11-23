@@ -308,7 +308,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-class NET(nn.Module):
+class Deeplab_v3(nn.Module):
     # in_channel = 3 fine-tune
     def __init__(self, class_number=18):
         super().__init__()
@@ -320,7 +320,7 @@ class NET(nn.Module):
         self.low_feature1 = nn.Sequential(nn.Conv2d(64, 32, 1, 1),
                                           nn.BatchNorm2d(32),
                                           nn.ReLU(inplace=True))
-        self.low_feature2 = nn.Sequential(nn.Conv2d(64, 64, 1, 1),
+        self.low_feature3 = nn.Sequential(nn.Conv2d(256, 64, 1, 1),
                                           nn.BatchNorm2d(64),
                                           nn.ReLU(inplace=True))
         self.low_feature4 = nn.Sequential(nn.Conv2d(512, 128, 1, 1),
@@ -338,17 +338,12 @@ class NET(nn.Module):
             nn.Conv2d(256 + 128, 256, 3, 1, padding=1), nn.BatchNorm2d(256),
             nn.ReLU(inplace=True))
 
-        self.conv_cat2 = nn.Sequential(
+        self.conv_cat3 = nn.Sequential(
             nn.Conv2d(256 + 64, 256, 3, 1, padding=1), nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True), nn.Conv2d(256, 256, 3, 1, padding=1),
-            nn.BatchNorm2d(256), nn.ReLU(inplace=True),
-            nn.Conv2d(256, 64, 3, 1, padding=1), nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True))
+            nn.ReLU(inplace=True), nn.Conv2d(256, 64, 3, 1, padding=1),
+            nn.BatchNorm2d(64), nn.ReLU(inplace=True))
 
         self.conv_cat1 = nn.Sequential(nn.Conv2d(64 + 32, 64, 3, 1, padding=1),
-                                       nn.BatchNorm2d(64),
-                                       nn.ReLU(inplace=True),
-                                       nn.Conv2d(64, 64, 3, 1, padding=1),
                                        nn.BatchNorm2d(64),
                                        nn.ReLU(inplace=True),
                                        nn.Conv2d(64, 18, 3, 1, padding=1))
@@ -364,14 +359,14 @@ class NET(nn.Module):
         x = self.aspp(x)  # 256, 8*8
 
         low_feature1 = self.low_feature1(x1)  # 64,  128*128
-        low_feature2 = self.low_feature2(x2)  # 64,  64*64
-        # low_feature3 = self.low_feature3(x3) # 256, 64*64
+        # low_feature2 = self.low_feature2(x2) # 64,  64*64
+        low_feature3 = self.low_feature3(x3)  # 256, 64*64
         low_feature4 = self.low_feature4(x4)  # 512, 32*32 -> 128, 32*32
         # low_feature5 = self.low_feature5(x5) # 1024,16*16
 
         size1 = low_feature1.shape[2:]
-        size2 = low_feature2.shape[2:]
-        # size3 = low_feature3.shape[2:]
+        # size2 = low_feature2.shape[2:]
+        size3 = low_feature3.shape[2:]
         size4 = low_feature4.shape[2:]
         # size5 = low_feature5.shape[2:]
 
@@ -381,11 +376,11 @@ class NET(nn.Module):
                                          align_corners=True)
         x = self.conv_cat4(torch.cat([low_feature4, decoder_feature4], dim=1))
 
-        decoder_feature2 = F.interpolate(x,
-                                         size=size2,
+        decoder_feature3 = F.interpolate(x,
+                                         size=size3,
                                          mode='bilinear',
                                          align_corners=True)
-        x = self.conv_cat2(torch.cat([low_feature2, decoder_feature2], dim=1))
+        x = self.conv_cat3(torch.cat([low_feature3, decoder_feature3], dim=1))
 
         decoder_feature1 = F.interpolate(x,
                                          size=size1,
@@ -403,7 +398,7 @@ class NET(nn.Module):
 
 def init_model():
     model_path = os.path.join(os.path.dirname(__file__), 'model.pkl')
-    model = NET()
+    model = Deeplab_v3()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model_state = torch.load(model_path, map_location=device)
