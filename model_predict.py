@@ -51,4 +51,4 @@ def predict(model, input_path, output_dir):
 if __name__ == "__main__":
     from model_define import init_model
     model = init_model()
-    predict(model, '../data/images/10.tif', '')
+    predict(model, './test.tif', '')
