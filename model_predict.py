@@ -24,7 +24,9 @@ def mergeImage(n, imgs, o_size, n_size):
             pos = (256 * j, 256 * i, 256 * (j + 1), 256 * (i + 1))
             img.paste(imgs[i * n + j], pos)
     img = img.resize(o_size)
-    return img
+    a = np.array(img)
+    a[a > 17] = 17
+    return Image.fromarray(a)
 
 
 def predict(model, input_path, output_dir):
